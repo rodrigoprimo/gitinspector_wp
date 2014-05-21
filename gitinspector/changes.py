@@ -31,6 +31,7 @@ import os
 import subprocess
 import terminal
 import textwrap
+import re
 
 class FileDiff:
 	def __init__(self, string):
@@ -69,11 +70,26 @@ class Commit:
 		self.filediffs = []
 		commit_line = string.split("|")
 
-		if commit_line.__len__() == 4:
+		if commit_line.__len__() == 5:
 			self.date = commit_line[0]
 			self.sha = commit_line[1]
-			self.author = commit_line[2].strip()
+			self.author = Commit.wordpress_author(commit_line)
 			self.email = commit_line[3].strip()
+			self.message = commit_line[4].strip()
+
+	@staticmethod
+	def wordpress_author(commit_line):
+		if "props" in commit_line[4].lower():
+			m = re.search('props\s+?(to|:)?\s*?([^,.;/ ]+)', commit_line[4].lower())
+
+			if m:
+				return m.group(2)
+			else:
+				print(commit_line[4])
+				return commit_line[2].strip()
+		else:
+			return commit_line[2].strip()
+
 
 	def add_filediff(self, filediff):
 		self.filediffs.append(filediff)
@@ -85,12 +101,12 @@ class Commit:
 	def get_author_and_email(string):
 		commit_line = string.split("|")
 
-		if commit_line.__len__() == 4:
-			return (commit_line[2].strip(), commit_line[3].strip())
+		if commit_line.__len__() == 5:
+			return (Commit.wordpress_author(commit_line), commit_line[3].strip())
 
 	@staticmethod
 	def is_commit_line(string):
-		return string.split("|").__len__() == 4
+		return string.split("|").__len__() == 5
 
 class AuthorInfo:
 	email = None
@@ -106,7 +122,7 @@ class Changes:
 
 	def __init__(self, hard):
 		self.commits = []
-		git_log_r = subprocess.Popen("git log --reverse --pretty=\"%cd|%H|%aN|%aE\" --stat=100000,8192 --no-merges -w " +
+		git_log_r = subprocess.Popen("git log --reverse --pretty=\"%cd|%H|%aN|%aE|%B\" --stat=100000,8192 --no-merges -w " +
 		                             interval.get_since() + interval.get_until() +
 		                             "{0} --date=short".format("-C -C -M" if hard else ""),
 		                             shell=True, bufsize=1, stdout=subprocess.PIPE).stdout
