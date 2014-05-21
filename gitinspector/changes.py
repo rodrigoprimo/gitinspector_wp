@@ -31,6 +31,7 @@ import os
 import subprocess
 import terminal
 import textwrap
+import re
 
 class FileDiff:
 	def __init__(self, string):
@@ -72,7 +73,7 @@ class Commit:
 		if commit_line.__len__() == 4:
 			self.date = commit_line[0]
 			self.sha = commit_line[1]
-			self.author = commit_line[2].strip()
+			self.author = Commit.wordpress_author(commit_line)
 			self.email = commit_line[3].strip()
 
 	def add_filediff(self, filediff):
@@ -86,7 +87,27 @@ class Commit:
 		commit_line = string.split("|")
 
 		if commit_line.__len__() == 4:
-			return (commit_line[2].strip(), commit_line[3].strip())
+			return (Commit.wordpress_author(commit_line), commit_line[3].strip())
+
+        @staticmethod
+        def wordpress_author(commit_line):
+		git_log_r = subprocess.Popen("git log --pretty=\"%B\" " + commit_line[1] + "^.." + commit_line[1], 
+                                             shell=True, bufsize=1, stdout=subprocess.PIPE).stdout.read()
+
+		commit_message = git_log_r.strip().decode("unicode_escape", "ignore")
+		commit_message = commit_message.encode("latin-1", "replace")
+		commit_message = commit_message.decode("utf-8", "replace")
+
+                if "props" in commit_message.lower():
+                        m = re.search('props\s+?(to|:)?\s*?([^,.;/ \n]+)', commit_message.lower())
+
+                        if m:
+                                return m.group(2)
+                        else:
+                                print(commit_message)
+                                return commit_line[2].strip()
+                else:
+                        return commit_line[2].strip()
 
 	@staticmethod
 	def is_commit_line(string):
