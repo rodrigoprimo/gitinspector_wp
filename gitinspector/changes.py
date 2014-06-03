@@ -73,7 +73,7 @@ class Commit:
 		if commit_line.__len__() == 4:
 			self.date = commit_line[0]
 			self.sha = commit_line[1]
-			self.author = Commit.wordpress_author(commit_line)
+			self.author, self.core, self.commit_type = Commit.wordpress_author(commit_line)
 			self.email = commit_line[3].strip()
 
 	def add_filediff(self, filediff):
@@ -87,7 +87,7 @@ class Commit:
 		commit_line = string.split("|")
 
 		if commit_line.__len__() == 4:
-			return (Commit.wordpress_author(commit_line), commit_line[3].strip())
+			return (Commit.wordpress_author(commit_line)[0], commit_line[3].strip())
 
         @staticmethod
         def wordpress_author(commit_line):
@@ -98,16 +98,22 @@ class Commit:
 		commit_message = commit_message.encode("latin-1", "replace")
 		commit_message = commit_message.decode("utf-8", "replace")
 
+		author = commit_line[2].strip()
+		core_member = 1
+
                 if "props" in commit_message.lower():
                         m = re.search('props\s+?(to|:)?\s*?([^,.;/ \n]+)', commit_message.lower())
 
                         if m:
-                                return m.group(2)
-                        else:
-                                print(commit_message)
-                                return commit_line[2].strip()
-                else:
-                        return commit_line[2].strip()
+				author = m.group(2)
+				core_member = 0
+
+		if re.search('fixes #[0-9]+?', commit_message.lower()) is not None:
+			commit_type = 'bug fix'
+		else:
+			commit_type = 'new feature'
+
+		return (author, core_member, commit_type)
 
 	@staticmethod
 	def is_commit_line(string):
@@ -118,6 +124,7 @@ class AuthorInfo:
 	insertions = 0
 	deletions = 0
 	commits = 0
+	core = 0
 
 class Changes:
 	authors = {}
@@ -146,7 +153,7 @@ class Changes:
 				self.authors_by_email[email] = author
 
 			if Commit.is_commit_line(j) or i is lines[-1]:
-				if found_valid_extension:
+				if found_valid_extension and commit.commit_type == 'new feature':
 					self.commits.append(commit)
 
 				found_valid_extension = False
@@ -176,6 +183,8 @@ class Changes:
 	def __modify_authorinfo__(self, authors, key, commit):
 		if authors.get(key, None) == None:
 			authors[key] = AuthorInfo()
+
+		authors[key].core = commit.core
 
 		if commit.get_filediffs():
 			authors[key].commits += 1
@@ -294,7 +303,7 @@ class ChangesOutput(Outputable):
 		if authorinfo_list:
 			print(textwrap.fill(_(HISTORICAL_INFO_TEXT) + ":", width=terminal.get_size()[0]) + "\n")
 			terminal.printb(_("Author").ljust(21) + _("Commits").rjust(13) + _("Insertions").rjust(14) +
-			                _("Deletions").rjust(15) + _("% of changes").rjust(16))
+			                _("Deletions").rjust(15) + _("% of changes").rjust(16) + _("Core").rjust(17))
 
 			for i in sorted(authorinfo_list):
 				authorinfo = authorinfo_list.get(i)
@@ -304,7 +313,8 @@ class ChangesOutput(Outputable):
 				print(str(authorinfo.commits).rjust(13), end=" ")
 				print(str(authorinfo.insertions).rjust(13), end=" ")
 				print(str(authorinfo.deletions).rjust(14), end=" ")
-				print("{0:.2f}".format(percentage).rjust(15))
+				print("{0:.2f}".format(percentage).rjust(15), end=" ")
+				print(str(authorinfo.core).rjust(16))
 		else:
 			print(_(NO_COMMITED_FILES_TEXT) + ".")
 
