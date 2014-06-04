@@ -19,7 +19,7 @@ wordpress_names = {
 	'Mark Jaquith': 'markjaquith',
 	'Matt Mullenweg': 'matt',
 	'Matt Thomas': 'iammattthomas',
-	'Michael Adams (mdawa': 'mdawaffe',
+	'Michael Adams (mdawaffe)': 'mdawaffe',
 	'Mike Little': 'mikelittle',
 	'Nikolay Bachiyski': 'nbachiyski',
 	'Pete Mall': 'petemall',
