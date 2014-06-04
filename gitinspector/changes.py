@@ -91,6 +91,8 @@ class Commit:
 
         @staticmethod
         def wordpress_author(commit_line):
+		from wordpress_names import wordpress_names
+
 		git_log_r = subprocess.Popen("git log --pretty=\"%B\" " + commit_line[1] + "^.." + commit_line[1], 
                                              shell=True, bufsize=1, stdout=subprocess.PIPE).stdout.read()
 
@@ -112,6 +114,9 @@ class Commit:
 			commit_type = 'bug fix'
 		else:
 			commit_type = 'new feature'
+
+		if wordpress_names.has_key(author):
+			author = wordpress_names[author]
 
 		return (author, core_member, commit_type)
 
