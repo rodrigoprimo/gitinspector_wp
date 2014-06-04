@@ -108,7 +108,8 @@ class Commit:
 
                         if m:
 				author = m.group(2)
-				core_member = 0
+				if author not in wordpress_names.values():
+					core_member = 0
 
 		if re.search('fixes #[0-9]+?', commit_message.lower()) is not None:
 			commit_type = 'bug fix'
